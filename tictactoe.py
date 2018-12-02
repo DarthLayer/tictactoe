@@ -5,7 +5,13 @@ import matplotlib.pyplot as plt
 import pprint
 import random
 
-def TicTacToeGame(object):
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import SGD
+#from keras.utils.vis_utils import plot_model
+from keras.layers import Dropout
+
+class TicTacToeGame(object):
     def __init__(self):
         self.board = np.full((3,3),2)
     
@@ -56,4 +62,56 @@ def TicTacToeGame(object):
              if 2 not in self.board[i,:] and len(set(self.board[i,:]))==1:
                  return "Won"
         #check for a win along columns
-        for j in range(self.board.shape[1])
+        for j in range(self.board.shape[1]):
+            if 2 not in self.board[:,j] and len(set(self.board[:,j]))==1:
+                return "Won"
+        
+        #check for a win along diagonals
+        if 2 not in np.diag(self.board) and len(set(np.diag(self.board)))==1:
+            return "Won"
+        if 2 not in np.diag(np.fliplr(self.board)) and len(set(np.diag(np.fliplr(self.board))))==1:
+            return "Won"
+        
+        #check for a draw
+        if not 2 in self.board:
+            return "Drawn"
+        else:
+            return "In progress"
+        
+    def legal_moves_generator(current_board_state,turn_monitor):
+        """
+        Function that returns the set of all possible legal moves and resulting
+        board states, for a given input board state and player
+        Args:
+            current_board_state: the current board state
+            turn_monitor: 1 if its player 1 (places Xs), 0 if its player 0 (places Os)
+        Returns:
+            legal_moves_dict: a dictionary of a list of possible next coordinate-resulting
+            board state pairs
+            The resulting board state is flattened to 1d array
+        """
+        legal_moves_dict = {}
+        for i in range(current_board_state.shape[0]):
+            for j in range(current_board_state.shape[1]):
+                if current_board_state[i,j]==2:
+                    board_state_copy = current_board_state.copy()
+                    board_state_copy[i,j] = turn_monitor
+                    legal_moves_dict[(i,j)] = board_state_copy.flatten()
+        return legal_moves_dict
+
+    def set_model(self):
+        self.model = Sequential()
+        self.model.add(Dense(18,input_dim=9,kernel_initializer='normal',activation='relu'))
+        self.model.add(Dropout(0.1))
+        self.model.add(Dense(9, kernel_initializer='normal',activation='relu'))
+        self.model.add(Dropout(0.1))
+        #self.model.add(Dense(9, kernel_initializer='normal',activation='relu'))
+        #self.model.add(Dropout(0.1))
+        #self.model.add(Dropout(0.1))
+        #self.model.add(Dense(5, kernel_initializer='normal',activation='relu'))
+        self.model.add(Dense(1,kernel_initializer='normal'))
+        self.learning_rate = 0.001
+        self.momentum = 0.8
+        self.sgd = SGD(lr=self.learning_rate,momentum=self.momentum,nesterov=False)
+        self.model.compile(optimizer=self.sgd,loss='mean_squared_error')
+        self.model.summary()
